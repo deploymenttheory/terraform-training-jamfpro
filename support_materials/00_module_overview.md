@@ -20,31 +20,43 @@
 
 ---
 
-### Module 1: DevOps & Infrastructure as Code Foundations
+## Module 1: DevOps & Infrastructure as Code Foundations
 
-**Learning Outcomes:** Master the mindset shift from GUI-based Jamf management to code-based infrastructure
+**Learning Outcomes:** 
+- Understand Infrastructure as Code principles and why configuration as code beats click ops
+- Master VS Code as the primary development environment for infrastructure management
+- Gain proficiency in Git fundamentals, GitOps workflows, and collaborative development practices
+- Understand Terraform core concepts, architecture, and the provider ecosystem
+- Learn HCL syntax and Terraform block types (provider, resource, data, variable, module, output)
+- Understand the complete Terraform workflow (write, init, validate, plan, apply, destroy)
+- Apply hands-on experience with Git and Terraform through practical exercises
 
-#### Instructor Led
+### Day 1 (Instructor Led)
 
 #### Topic 1.1: Infrastructure as Code principles - why config as code beats click ops *(2 hours)*
 
 - Why config as code? - [Configuration as Code vs Click-and-Deploy](https://devcenter.upsun.com/posts/why-configuration-as-code-beats-click-and-deploy/)
+- Architecture of the control plane - - TODO
 
 #### Topic 1.2: VS Code fundamentals *(1.5 hours)*
 
 - What is VS Code?
 - [Visual Studio Code Made Easy For Beginners](https://www.youtube.com/watch?v=bfvq_kTbnd8&t=546s)
-- Install / VS Code walkthrough 'Get started with VS Code'
+  - Complete steps from video
 - [VS Code extensions tutorial](https://www.youtube.com/watch?v=q_Hq91-N9tU)
   - themes / icons
   - better comments
   - indent rainbow
   - codesnap
   - hashicorp terraform
-- [Install VS Code] (https://code.visualstudio.com/download)
+
+#### Support Materials
+
+- [Install VS Code](https://code.visualstudio.com/download)
 - [Official VS Code documentation](https://code.visualstudio.com/docs)
 - [Keyboard shortcuts reference](https://code.visualstudio.com/assets/docs/getstarted/tips-and-tricks/KeyboardReferenceSheet.png)
 - [Tips and tricks](https://code.visualstudio.com/docs/getstarted/tips-and-tricks) 
+
 #### Topic 1.3: Git fundamentals for infrastructure management *(2 hours)*
 
 - [What is GitOps, How GitOps works and Why it's so useful](https://www.youtube.com/watch?v=f5EpcWp0THw&t=1s)
@@ -52,6 +64,12 @@
 - [DevOps master class](https://github.com/in28minutes/devops-master-class)
 - Branching strategies with GitLab flow
 - Release management with release-please
+
+#### Hack Day Practice: Git + Terraform workflow mastery *(3 hours)*
+
+
+### Day 2 (Instructor Led)
+
 #### Topic 1.4: Terraform core concepts and architecture *(2 hours)*
 
 - [Terraform overview](https://www.youtube.com/watch?v=l5k1ai_GBDE)
@@ -60,14 +78,17 @@
 - Overview of Providers and their purpose
 - Overview of HCL Configuration files (templates)
 - Overview of remote state management with Terraform Cloud
+
 #### Topic 1.5: Provider ecosystem and version constraints *(2 hours)*
 
 - Terraform registry (public vs. private)
 - Provider versioning and alignment to Jamf Pro versions
 - Useful providers within the ecosystem (local, random, time, http, axm)
+
 #### Topic 1.6: Introduction to HCL syntax *(2 hours)*
 
 - Terraform block types (provider, resource, data, variable, module, output, provisioners)
+
 #### Topic 1.7: Terraform Workflow and state management *(2 hours)*
 
 - Write
@@ -76,7 +97,10 @@
 - Plan: `terraform plan`
 - Apply: `terraform apply`
 - Destroy: `terraform destroy`
-#### Student-Led Hands-on Practice: Git + Terraform workflow mastery *(3 hours)*
+
+### Module 1 Practice (Student-Led): Git + Terraform workflow mastery *(3 hours)*
+
+This is a student-led practice session where the students will be given a series of tasks to complete.
 
 #### Practice 1.1: VS Code intro videos *(0.5 hours)*
 
@@ -85,6 +109,9 @@
 #### Practice 1.2: Git commands and workflow mastery *(2 hours)*
 
 - Complete: [Git/GitHub beginner roadmap](https://roadmap.sh/git-github?r=git-github-beginner) 
+- Complete: [Learn Git Branching](https://learngitbranching.js.org/)
+- Complete: [Oh My Git](https://ohmygit.org/)
+
 #### Prerequisites:
 
 - [Terraform CLI](https://developer.hashicorp.com/terraform) - local install
