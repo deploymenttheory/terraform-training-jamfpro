@@ -66,7 +66,7 @@
 - Release management with release-please
 
 #### Hack Day Practice: Git + Terraform workflow mastery *(3 hours)*
-
+- Complete: [Learn Git Branching](https://learngitbranching.js.org/)
 
 ### Day 2 (Instructor Led)
 
@@ -109,7 +109,6 @@ This is a student-led practice session where the students will be given a series
 #### Practice 1.2: Git commands and workflow mastery *(2 hours)*
 
 - Complete: [Git/GitHub beginner roadmap](https://roadmap.sh/git-github?r=git-github-beginner) 
-- Complete: [Learn Git Branching](https://learngitbranching.js.org/)
 - Complete: [Oh My Git](https://ohmygit.org/)
 
 #### Prerequisites:
