@@ -66,7 +66,8 @@ Follow these instructions:
 Things that you will need to know for this hack day are the following:
 
 - You might want to create a variable for your team name prefix to make things easier to manage in terms on naming standards.
-- ***
+- When running your `terraform plan`, you may see some changes/diffs for resources such as config profile or policies, where in terraform, there are attributes that don't exist in Jamf Pro. For these, you can ignore, as long as you are confident that the configuration is exactly the same in Terraform as it is in the UI.
+- There may be some times when copying all the names and IDs out of Jamf will become tiresome. Try and think of ways to make that easier.
 
 ## 🧰 Tasks
 
