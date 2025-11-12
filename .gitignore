@@ -16,4 +16,5 @@ terraform.tfvars
 *.terraform
 *.hcl
 
-
+# Notes
+notes.txt
