@@ -1,4 +1,4 @@
-# 📁 Module 08: Terraform State Management
+# 📁 Module 06: Terraform State Management
 
 ## _Duration: 3 hours | Labs: 4_ | Difficulty: 🟡 Intermediate\*
 
@@ -18,9 +18,9 @@
 10. [State Management Operations](#️-state-management-operations)
 11. [State Refresh and Performance](#️-state-refresh-and-performance)
 12. [State Backups and Recovery](#-state-backups-and-recovery)
-13. [Hands-On Exercises](#-exercise-80-state-management-hands-on)
+13. [Hands-On Exercises](#-exercise-60-state-management-hands-on)
 14. [State Management Best Practices](#-state-management-best-practices)
-15. [Knowledge Check Quiz](#-knowledge-check-module-8-quiz)
+15. [Knowledge Check Quiz](#-knowledge-check-module-6-quiz)
 
 ---
 
@@ -1778,7 +1778,7 @@ terraform state push backup-20231201-143000.tfstate
 
 ---
 
-## 💻 **Exercise 8.0**: State Management Hands-On
+## 💻 **Exercise 6.0**: State Management Hands-On
 
 **Duration**: 25 minutes
 
@@ -1877,7 +1877,7 @@ terraform state push backup.tfstate     # ✅ Works with all backends
 
 ---
 
-## 💻 **Exercise 8.1**: Configuring Remote State Backend
+## 💻 **Exercise 6.1**: Configuring Remote State Backend
 
 **Duration**: 30 minutes
 
@@ -2047,7 +2047,7 @@ terraform plan
 
 ---
 
-## 💻 **Exercise 8.2**: Remote State Cross-Configuration Reference
+## 💻 **Exercise 6.2**: Remote State Cross-Configuration Reference
 
 **Duration**: 25 minutes
 
@@ -2218,7 +2218,7 @@ terraform plan
 
 ---
 
-## 💻 **Exercise 8.3**: State Recovery and Versioning
+## 💻 **Exercise 6.3**: State Recovery and Versioning
 
 **Duration**: 20 minutes
 
@@ -2662,7 +2662,7 @@ terraform {
 
 ---
 
-## 🧠 Knowledge Check: Module 8 Quiz
+## 🧠 Knowledge Check: Module 6 Quiz
 
 Test your understanding of Terraform state management concepts:
 
@@ -2838,7 +2838,7 @@ Test your understanding of Terraform state management concepts:
 
 ---
 
-## ✅ Module 8 Summary
+## ✅ Module 6 Summary
 
 **🎯 Learning Objectives Achieved:**
 
