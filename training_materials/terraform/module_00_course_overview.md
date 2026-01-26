@@ -4,8 +4,8 @@
 
 1.  [Infrastructure as Code Concepts](./module_01_infrastructure_as_code_concepts.md)
 2.  [Configuration as Code Concepts](./module_02_configuration_as_code_concepts.md)
-3.  [HashiCorp Introduction](./module_03_hashicorp_introduction.md)
-4.  [Lab Setup](./module_04_lab_setup.md)
+3.  [Lab Setup](./module_03_lab_setup.md)
+4.  [HashiCorp Introduction](./module_04_hashicorp_introduction.md)
 5.  [Terraform Basics](./module_05_terraform_basics.md)
 6.  [Terraform Providers](./module_06_terraform_providers.md)
 7.  [Terraform Language and HashiCorp Language](./module_07_terraform_language_and_hashicorp_language.md)
