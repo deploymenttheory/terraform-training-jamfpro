@@ -18,7 +18,7 @@
 10. [State Management Operations](#️-state-management-operations)
 11. [State Refresh and Performance](#️-state-refresh-and-performance)
 12. [State Backups and Recovery](#-state-backups-and-recovery)
-13. [Hands-On Exercises](#-exercise-60-state-management-hands-on)
+13. [Hands-On Exercises](#-exercise-60-understanding-state-with-local-backend)
 14. [State Management Best Practices](#-state-management-best-practices)
 15. [Knowledge Check Quiz](#-knowledge-check-module-6-quiz)
 
@@ -1778,102 +1778,113 @@ terraform state push backup-20231201-143000.tfstate
 
 ---
 
-## 💻 **Exercise 6.0**: State Management Hands-On
+## 💻 **Exercise 6.0**: Understanding State with Local Backend
 
-**Duration**: 25 minutes
+**Duration**: 20 minutes
 
-⚠️ **Important Note**: This exercise uses **local state** for simplicity. State operations (`list`, `show`, `mv`, `rm`) work with **all backends**, but `pull`/`push` operations have limitations with HCP Terraform.
+**Goal**: Practice basic state inspection commands using local state with simple resources.
 
-Let's practice essential state management operations.
+⚠️ **Important Note**: This exercise uses **local state** and **simple resources** that don't require cloud credentials. In production, you'll use remote backends.
 
-**Step 1: Create Infrastructure**
+**Step 1: Create Simple Infrastructure**
 
 ```bash
 mkdir terraform-state-demo
 cd terraform-state-demo
 
-cat > main.tf << EOF
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-  tags = { Name = "state-demo-vpc" }
+cat > main.tf << 'EOF'
+terraform {
+  required_providers {
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
 }
 
-resource "aws_instance" "web" {
-  count         = 2
-  ami           = "ami-12345"  # Update with valid AMI
-  instance_type = "t2.micro"
+# Simple resources that don't require cloud credentials
+resource "random_pet" "server" {
+  count  = 3
+  length = 2
+}
 
-  tags = {
-    Name = "web-\${count.index + 1}"
-  }
+resource "random_string" "password" {
+  count   = 3
+  length  = 16
+  special = true
 }
 EOF
 
 terraform init
-terraform apply
+terraform apply -auto-approve
 ```
 
-**Step 2: Practice State Commands**
+**Step 2: Inspect State**
 
 ```bash
-# List all resources
+# List all resources in state
 terraform state list
 
-# Show specific resource
-terraform state show aws_instance.web[0]
+# Output:
+# random_pet.server[0]
+# random_pet.server[1]
+# random_pet.server[2]
+# random_string.password[0]
+# random_string.password[1]
+# random_string.password[2]
 
-# Create backup
-terraform state pull > backup.tfstate
+# Show detailed attributes of a specific resource
+terraform state show random_pet.server[0]
 
-# Rename resource
-terraform state mv aws_instance.web[0] aws_instance.primary
+# View the actual state file structure
+cat terraform.tfstate | jq '.resources[] | {type, name, instances}'
 
-# Remove from state
-terraform state rm aws_instance.web[1]
+# Pull state (creates backup copy)
+terraform state pull > state-backup-$(date +%Y%m%d).tfstate
+```
 
-# View changes
+**Step 3: State Manipulation**
+
+```bash
+# Rename a resource in state (refactoring)
+terraform state mv 'random_pet.server[0]' 'random_pet.primary_server'
+
+# View the change
+terraform state list
+
+# Remove a resource from state (stop managing it)
+terraform state rm 'random_pet.server[1]'
+
+# Verify it's gone from state but still exists
+terraform state list
+# Notice: random_pet.server[1] is gone
+
+# Run plan to see Terraform wants to recreate the removed resource
 terraform plan
+# Terraform detects random_pet.server[1] is missing from state
 ```
 
-**Step 3: Recovery Operations**
+**Step 4: Clean Up**
 
 ```bash
-# Restore backup if needed (LOCAL STATE ONLY)
-terraform state push backup.tfstate
+# Destroy all resources
+terraform destroy -auto-approve
 
-# Re-import removed resource (works with all backends)
-terraform import 'aws_instance.web[1]' i-1234567890abcdef0
-
-# Clean up
-terraform destroy
+# Verify state file
+ls -la terraform.tfstate*
+# You should see:
+# - terraform.tfstate (empty after destroy)
+# - terraform.tfstate.backup (previous state)
+# - state-backup-*.tfstate (your manual backup)
 ```
 
-**Step 4: Remote State Considerations**
+💡 **Key Takeaways**:
+- State tracks the mapping between configuration and real resources
+- State commands (`list`, `show`, `mv`, `rm`) work identically with all backends
+- Always backup state before manual manipulation
+- Removing from state doesn't destroy the resource—it just stops tracking it
 
-```bash
-# State operations work with all backends:
-terraform state list                    # ✅ Works with all backends
-terraform state show aws_instance.web[0] # ✅ Works with all backends
-terraform state mv aws_instance.web[0] aws_instance.primary # ✅ Works with all backends
-terraform state rm aws_instance.web[1]  # ✅ Works with all backends
-terraform import aws_instance.web i-123 # ✅ Works with all backends (legacy approach)
-
-# State pull/push operations (all backends):
-terraform state pull > backup.tfstate   # ✅ Works with all backends
-terraform state push backup.tfstate     # ✅ Works with all backends
-
-# Important HCP Terraform/HCP Terraform considerations:
-# - state push requires matching Terraform version (use -ignore-remote-version if needed)
-# - State push performs safety checks (lineage, serial number validation)
-# - Web UI provides easier rollback interface than CLI commands
-# - API available for advanced automation scenarios
-```
-
-**📚 Learn More:**
-- [Migrating Terraform Workspace State Across Organizations](https://support.hashicorp.com/hc/en-us/articles/360001151948-Migrate-Workspace-State-Using-Terraform-State-Push-Pull)
-- [terraform state push command reference](https://developer.hashicorp.com/terraform/cli/commands/state/push)
-
-💡 **Pro Tip**: Always backup state before risky operations. For remote backends, use versioning (S3) or the platform's built-in state history (HCP Terraform)!
+---
 
 ---
 
@@ -1881,7 +1892,14 @@ terraform state push backup.tfstate     # ✅ Works with all backends
 
 **Duration**: 30 minutes
 
-Choose ONE backend based on your available cloud provider and configure remote state.
+**Goal**: Set up a remote state backend and create real Jamf Pro resources to manage with remote state.
+
+**Prerequisites**:
+- Jamf Pro instance access
+- OAuth2 credentials (client ID and secret)
+- Access to ONE cloud provider (AWS, Azure, or GCP) OR HCP Terraform account
+
+Choose ONE backend option based on your available cloud provider:
 
 ### Option A: AWS S3 Backend
 
@@ -1928,11 +1946,83 @@ terraform {
 }
 ```
 
-**Step 3: Test Migration**
+**Step 3: Create Jamf Pro Resources**
+
+Create `main.tf`:
+
+```hcl
+terraform {
+  required_providers {
+    jamfpro = {
+      source  = "deploymenttheory/jamfpro"
+      version = "~> 0.0.1"
+    }
+  }
+}
+
+provider "jamfpro" {
+  instance_fqdn = var.jamfpro_instance_fqdn
+  auth_method   = "oauth2"
+  client_id     = var.jamfpro_client_id
+  client_secret = var.jamfpro_client_secret
+}
+
+resource "jamfpro_category" "state_demo" {
+  name     = "State Management Demo"
+  priority = 10
+}
+
+resource "jamfpro_category" "learning" {
+  name     = "Learning Resources"
+  priority = 5
+}
+
+output "state_demo_category_id" {
+  value = jamfpro_category.state_demo.id
+}
+
+output "learning_category_id" {
+  value = jamfpro_category.learning.id
+}
+```
+
+Create `variables.tf`:
+
+```hcl
+variable "jamfpro_instance_fqdn" {
+  type        = string
+  description = "Jamf Pro instance FQDN"
+}
+
+variable "jamfpro_client_id" {
+  type        = string
+  description = "OAuth2 client ID"
+  sensitive   = true
+}
+
+variable "jamfpro_client_secret" {
+  type        = string
+  description = "OAuth2 client secret"
+  sensitive   = true
+}
+```
+
+Create `terraform.tfvars`:
+
+```hcl
+jamfpro_instance_fqdn = "your-instance.jamfcloud.com"
+jamfpro_client_id     = "your-client-id"
+jamfpro_client_secret = "your-client-secret"
+```
+
+**Step 4: Initialize and Apply**
 
 ```bash
-# Initialize and migrate local state to S3
+# Initialize with S3 backend
 terraform init
+
+# Apply to create resources (state stored in S3)
+terraform apply
 
 # Verify state is in S3
 aws s3 ls s3://terraform-state-learning-yourusername/learning/jamfpro/
@@ -1983,20 +2073,31 @@ terraform {
 }
 ```
 
-**Step 3: Test Migration**
+**Step 3: Create Jamf Pro Resources**
+
+Use the same `main.tf`, `variables.tf`, and `terraform.tfvars` from Option A (S3), but with the Azure backend configured.
+
+**Step 4: Initialize and Apply**
 
 ```bash
 # Login to Azure (if not already)
 az login
 
-# Initialize and migrate
+# Initialize with Azure backend
 terraform init
+
+# Apply to create resources (state stored in Azure)
+terraform apply
 
 # Verify state in Azure
 az storage blob list \
   --container-name tfstate \
   --account-name $STORAGE_ACCOUNT \
   --output table
+
+# Test state operations
+terraform state list
+terraform state show jamfpro_category.learning
 ```
 
 ### Option C: HCP Terraform Backend
@@ -2032,17 +2133,27 @@ terraform {
 }
 ```
 
-**Step 4: Test Migration**
+**Step 4: Create Jamf Pro Resources**
+
+Use the same `main.tf`, `variables.tf`, and `terraform.tfvars` from Option A (S3), but with the HCP Terraform cloud block configured.
+
+**Step 5: Initialize and Apply**
 
 ```bash
-# Initialize and migrate to HCP Terraform
+# Initialize with HCP Terraform backend
 terraform init
 
-# Run plan - notice it runs in HCP Terraform!
-terraform plan
+# Apply to create resources (state stored in HCP Terraform)
+terraform apply
+# Notice: The plan runs in HCP Terraform (remote execution)
+
+# Test state operations
+terraform state list
+terraform state show jamfpro_category.learning
 
 # Check workspace in UI
 # https://app.terraform.io/app/learning-terraform/workspaces/jamfpro-learning
+# View: States tab shows version history with UI rollback capability
 ```
 
 ---
@@ -2051,7 +2162,14 @@ terraform plan
 
 **Duration**: 25 minutes
 
-Practice referencing remote state between two separate Terraform configurations.
+**Goal**: Learn how to reference outputs from one Terraform configuration in another using remote state data sources.
+
+**Prerequisites**:
+- Completed Exercise 6.1 (remote backend configured)
+- Jamf Pro credentials
+- Same backend from Exercise 6.1 (S3, Azure, or HCP Terraform)
+
+This exercise demonstrates team delegation patterns where one team (Core/Platform) manages shared resources, and another team (Applications) consumes those resources via remote state.
 
 **Step 1: Create "Core" Configuration**
 
@@ -2114,12 +2232,44 @@ output "all_macs_group_id" {
 }
 ```
 
+Create `core/variables.tf`:
+
+```hcl
+variable "jamfpro_instance_fqdn" {
+  type        = string
+  description = "Jamf Pro instance FQDN"
+}
+
+variable "jamfpro_client_id" {
+  type        = string
+  description = "OAuth2 client ID"
+  sensitive   = true
+}
+
+variable "jamfpro_client_secret" {
+  type        = string
+  description = "OAuth2 client secret"
+  sensitive   = true
+}
+```
+
+Create `core/terraform.tfvars`:
+
+```hcl
+jamfpro_instance_fqdn = "your-instance.jamfcloud.com"
+jamfpro_client_id     = "your-client-id"
+jamfpro_client_secret = "your-client-secret"
+```
+
 **Step 2: Deploy Core Infrastructure**
 
 ```bash
 cd core
 terraform init
 terraform apply
+
+# Verify outputs
+terraform output
 ```
 
 **Step 3: Create "Application" Configuration**
@@ -2188,6 +2338,8 @@ output "policy_info" {
 }
 ```
 
+Create `app/variables.tf` and `app/terraform.tfvars` (same as core configuration).
+
 **Step 4: Deploy Application Configuration**
 
 ```bash
@@ -2196,6 +2348,7 @@ terraform init
 terraform apply
 
 # Observe how it references core infrastructure!
+terraform output
 ```
 
 **Step 5: Verify Cross-Configuration References**
@@ -2222,93 +2375,219 @@ terraform plan
 
 **Duration**: 20 minutes
 
-Practice state recovery using backend versioning capabilities.
+**Goal**: Practice recovering from state mistakes using backend versioning capabilities.
+
+**Prerequisites**:
+- Completed Exercise 6.1 (have resources managed in remote state)
+- Backend versioning enabled (should be from Exercise 6.1 setup)
+
+**Starting Point**: Navigate to your Exercise 6.1 directory with Jamf Pro resources.
+
+```bash
+cd terraform-state-learning  # Or wherever you did Exercise 6.1
+```
 
 ### For S3 Backend Users:
 
 ```bash
-# List state versions
-aws s3api list-object-versions \
-  --bucket your-terraform-state-bucket \
-  --prefix learning/jamfpro/terraform.tfstate
+# Verify current resources
+terraform state list
 
-# Make a change and apply
-terraform apply
-
-# Oops! Made a mistake. List versions again
+# List existing state versions (should see at least 1-2 from Exercise 6.1)
 aws s3api list-object-versions \
-  --bucket your-terraform-state-bucket \
+  --bucket terraform-state-learning-$(whoami) \
   --prefix learning/jamfpro/terraform.tfstate \
   --query 'Versions[*].[VersionId,LastModified,IsLatest]' \
   --output table
 
-# Download previous version
+# Make an intentional change to create a new state version
+terraform apply -var="jamfpro_category.state_demo.priority=20"
+
+# Oops! Simulate a mistake - remove a resource from state
+terraform state rm jamfpro_category.learning
+
+# Verify it's gone
+terraform state list
+# Notice: jamfpro_category.learning is missing
+
+# List versions again (should see new version from the rm operation)
+aws s3api list-object-versions \
+  --bucket terraform-state-learning-$(whoami) \
+  --prefix learning/jamfpro/terraform.tfstate \
+  --query 'Versions[*].[VersionId,LastModified,IsLatest]' \
+  --output table
+
+# Download the previous version (before the mistake)
+# Copy the VersionId from the second-to-last entry
 aws s3api get-object \
-  --bucket your-terraform-state-bucket \
+  --bucket terraform-state-learning-$(whoami) \
   --key learning/jamfpro/terraform.tfstate \
-  --version-id "VERSION_ID_HERE" \
+  --version-id "PASTE-VERSION-ID-HERE" \
   terraform.tfstate.recovered
 
 # Inspect recovered state
 cat terraform.tfstate.recovered | jq '.resources[] | {type, name}'
 
-# Restore if needed (CAREFUL!)
+# Verify the resource is in the recovered state
+cat terraform.tfstate.recovered | jq '.resources[] | select(.type=="jamfpro_category") | .name'
+
+# Restore the previous state version
 aws s3 cp terraform.tfstate.recovered \
-  s3://your-terraform-state-bucket/learning/jamfpro/terraform.tfstate
+  s3://terraform-state-learning-$(whoami)/learning/jamfpro/terraform.tfstate
+
+# Re-initialize to pull the restored state
+terraform init -reconfigure
+
+# Verify resource is back
+terraform state list
+# Success: jamfpro_category.learning is back!
 ```
 
 ### For Azure Backend Users:
 
 ```bash
-# Enable versioning
-az storage account blob-service-properties update \
-  --account-name your-storage-account \
+# Verify versioning is enabled (should be from Exercise 6.1)
+az storage account blob-service-properties show \
+  --account-name $STORAGE_ACCOUNT \
   --resource-group terraform-state-rg \
-  --enable-versioning true
+  --query versioning
 
-# Make changes and apply
-terraform apply
+# Verify current resources
+terraform state list
+
+# Make an intentional mistake - remove a resource from state
+terraform state rm jamfpro_category.learning
+
+# This creates a new state version in Azure
+terraform state list
+# Notice: jamfpro_category.learning is missing
 
 # List blob versions
 az storage blob list \
   --container-name tfstate \
-  --account-name your-storage-account \
+  --account-name $STORAGE_ACCOUNT \
   --include v \
   --query '[].{Name:name, Version:versionId, LastModified:properties.lastModified}' \
   --output table
 
-# Download specific version
+# Download the previous version (before the mistake)
+# Copy the VersionId from the previous version
 az storage blob download \
   --container-name tfstate \
   --name learning-jamfpro.tfstate \
-  --version-id "VERSION_ID_HERE" \
+  --version-id "PASTE-VERSION-ID-HERE" \
   --file terraform.tfstate.recovered \
-  --account-name your-storage-account
+  --account-name $STORAGE_ACCOUNT
+
+# Inspect recovered state
+cat terraform.tfstate.recovered | jq '.resources[] | select(.type=="jamfpro_category") | .name'
+
+# Upload recovered state back to Azure
+az storage blob upload \
+  --container-name tfstate \
+  --name learning-jamfpro.tfstate \
+  --file terraform.tfstate.recovered \
+  --account-name $STORAGE_ACCOUNT \
+  --overwrite
+
+# Re-initialize and verify
+terraform init -reconfigure
+terraform state list
+# Success: jamfpro_category.learning is restored!
 ```
 
 ### For HCP Terraform Users:
 
+**Using the Web UI (Recommended):**
+
+1. Navigate to your workspace: https://app.terraform.io/app/learning-terraform/workspaces/jamfpro-learning
+2. Click "States" in the left sidebar
+3. View complete state version history with details
+
+**Make an intentional mistake:**
+
 ```bash
-# Use the Web UI for state management:
-# 1. Navigate to your workspace
-# 2. Click "States" in the sidebar
-# 3. View state version history
-# 4. Select a previous version
-# 5. Click "Download" or "Rollback"
+# Remove a resource from state
+terraform state rm jamfpro_category.learning
 
-# Or use the API
+# This creates a new state version automatically
+terraform state list
+# Notice: jamfpro_category.learning is missing
+```
+
+**Recover via UI:**
+
+1. In the HCP Terraform UI, click "States" tab
+2. You'll see the latest state version (after the rm command)
+3. Click on the **previous** state version (before the mistake)
+4. Click "Rollback to this version" button
+5. Confirm the rollback
+
+**Verify recovery:**
+
+```bash
+# Pull the latest state
+terraform refresh
+
+# Verify resource is restored
+terraform state list
+# Success: jamfpro_category.learning is back!
+```
+
+**Alternative: Using the API:**
+
+```bash
+# Get your workspace ID and token first
+export TF_CLOUD_TOKEN="your-token-from-terraform-login"
+export WORKSPACE_ID="your-workspace-id"
+
+# List state versions
 curl \
   --header "Authorization: Bearer $TF_CLOUD_TOKEN" \
-  "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/state-versions" | jq
+  "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/state-versions" | jq '.data[].id'
 
-# Download specific version
+# Download a specific version
 curl \
   --header "Authorization: Bearer $TF_CLOUD_TOKEN" \
-  "https://app.terraform.io/api/v2/state-versions/$STATE_VERSION_ID/download" \
+  "https://app.terraform.io/api/v2/state-versions/STATE_VERSION_ID/download" \
   --output terraform.tfstate.recovered
 ```
 
-💡 **Pro Tip**: Test your recovery procedures regularly - don't wait for an emergency to learn how to restore state!
+💡 **Pro Tip**: HCP Terraform's UI makes state recovery much easier than CLI operations. This is one of the key benefits of using a managed backend!
+
+---
+
+## 📝 Exercise Summary
+
+Congratulations! You've completed the hands-on state management exercises. Here's what you've accomplished:
+
+**Exercise 6.0**: Learned state basics using simple local resources
+- ✅ Inspected state with `list` and `show` commands
+- ✅ Manipulated state with `mv` and `rm` operations
+- ✅ Created manual backups
+
+**Exercise 6.1**: Configured a production-ready remote backend
+- ✅ Set up S3/Azure/HCP Terraform backend with encryption and versioning
+- ✅ Created real Jamf Pro resources managed with remote state
+- ✅ Tested state operations with remote backend
+
+**Exercise 6.2**: Implemented cross-configuration state references
+- ✅ Created separate "core" and "app" configurations
+- ✅ Shared resources between configs using `terraform_remote_state`
+- ✅ Demonstrated team delegation patterns
+
+**Exercise 6.3**: Recovered from state mistakes using versioning
+- ✅ Created intentional state corruption
+- ✅ Listed and downloaded previous state versions
+- ✅ Successfully restored working state
+
+**🎯 Key Skills Developed:**
+- State inspection and debugging
+- Backend configuration and migration
+- Cross-team collaboration patterns
+- Disaster recovery procedures
+
+**➡️ Next Steps:** Apply these state management practices to your real Jamf Pro infrastructure!
 
 ---
 
