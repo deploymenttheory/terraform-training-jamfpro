@@ -13,7 +13,7 @@
 5. [AWS S3 Backend](#-aws-s3-backend)
 6. [Azure Storage Backend](#-azure-storage-backend)
 7. [Google Cloud Storage Backend](#-google-cloud-storage-backend)
-8. [HCP Terraform Backend](#️-terraform-cloud-backend)
+8. [HCP Terraform Backend](#️-hcp-terraform-backend)
 9. [Referencing Remote State Across Configurations](#-referencing-remote-state-across-configurations)
 10. [State Management Operations](#️-state-management-operations)
 11. [State Refresh and Performance](#️-state-refresh-and-performance)
@@ -915,7 +915,9 @@ terraform {
 
 ## ☁️ HCP Terraform Backend
 
-HCP Terraform (formerly Terraform Enterprise for SaaS) provides a fully managed state backend with enterprise-grade features that extend far beyond simple state storage. Unlike cloud provider backends (S3, Azure Storage, GCS) that only handle state storage and locking, HCP Terraform provides a complete **collaboration platform** with governance, policy enforcement, team management, and operational workflows.
+**HCP Terraform** (HashiCorp Cloud Platform Terraform, formerly known as "Terraform Cloud") provides a fully managed state backend with enterprise-grade features that extend far beyond simple state storage. Unlike cloud provider backends (S3, Azure Storage, GCS) that only handle state storage and locking, HCP Terraform provides a complete **collaboration platform** with governance, policy enforcement, team management, and operational workflows.
+
+**📝 Naming Note:** This product was rebranded from "Terraform Cloud" to "HCP Terraform" in 2023. You may see both names used interchangeably in documentation and community resources.
 
 **Advanced Locking with Run Queuing:**
 
