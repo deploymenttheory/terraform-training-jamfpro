@@ -13,7 +13,7 @@
 5. [AWS S3 Backend](#-aws-s3-backend)
 6. [Azure Storage Backend](#-azure-storage-backend)
 7. [Google Cloud Storage Backend](#-google-cloud-storage-backend)
-8. [Terraform Cloud Backend](#️-terraform-cloud-backend)
+8. [HCP Terraform Backend](#️-terraform-cloud-backend)
 9. [Referencing Remote State Across Configurations](#-referencing-remote-state-across-configurations)
 10. [State Management Operations](#️-state-management-operations)
 11. [State Refresh and Performance](#️-state-refresh-and-performance)
@@ -30,7 +30,7 @@ By the end of this module, you will be able to:
 
 - ✅ **Understand Terraform state** and its critical role in infrastructure management
 - ✅ **Choose between local and remote state** based on use case and team size
-- ✅ **Configure remote backends** for AWS S3, Azure Storage, GCP GCS, and Terraform Cloud
+- ✅ **Configure remote backends** for AWS S3, Azure Storage, GCP GCS, and HCP Terraform
 - ✅ **Reference remote state** across Terraform configurations using data sources
 - ✅ **Manage state files** with commands like `state mv`, `state rm`, and `state show`
 - ✅ **Work with state backups** and recovery mechanisms
@@ -55,7 +55,7 @@ While it might seem like Terraform could query your cloud provider on every oper
 - **🔄 Resource Mapping** - Binds configuration resource names to real infrastructure IDs (one-to-one relationship)
 - **📊 Metadata Storage** - Tracks attributes, dependencies, provider configurations, and lineage
 - **🔒 State Locking** - Prevents concurrent modifications through backend-specific locking mechanisms
-- **💾 State Backends** - Storage location for state (local file, S3, Azure Storage, GCS, Terraform Cloud, etc.)
+- **💾 State Backends** - Storage location for state (local file, S3, Azure Storage, GCS, HCP Terraform, etc.)
 - **🔗 Remote State Sharing** - Enables cross-configuration resource references and team delegation
 
 **📚 Learn More:**
@@ -141,7 +141,7 @@ When working in a team, state enables safe collaboration through **remote backen
 
 In the default local file configuration, each team member would have their own copy of `terraform.tfstate`, making coordination impossible—one person's changes would overwrite another's, leading to infrastructure corruption or data loss.
 
-Remote state backends solve this by storing state in a shared location (S3, Azure Storage, Terraform Cloud, etc.) that all team members can access. More critically, these backends support **state locking**—when one person runs `terraform apply`, the backend acquires a lock on the state file, preventing anyone else from running Terraform simultaneously. This prevents race conditions where two people modify infrastructure at the same time, which could lead to state corruption or conflicting changes.
+Remote state backends solve this by storing state in a shared location (S3, Azure Storage, HCP Terraform, etc.) that all team members can access. More critically, these backends support **state locking**—when one person runs `terraform apply`, the backend acquires a lock on the state file, preventing anyone else from running Terraform simultaneously. This prevents race conditions where two people modify infrastructure at the same time, which could lead to state corruption or conflicting changes.
 
 Without state locking, two team members could:
 1. Both read state version 1
@@ -149,7 +149,7 @@ Without state locking, two team members could:
 3. Both write back to state, with the second write overwriting the first person's changes
 4. Result: Lost changes, infrastructure inconsistencies, and potential data loss
 
-Terraform Cloud takes this even further with **run queuing**, detecting when a new plan is requested while an existing plan awaits approval and queuing operations in a central location for better team coordination.
+HCP Terraform takes this even further with **run queuing**, detecting when a new plan is requested while an existing plan awaits approval and queuing operations in a central location for better team coordination.
 
 **⚡ What State Fundamentally Enables:**
 
@@ -179,7 +179,7 @@ When working with Terraform in a team, using local state creates significant cha
 
 **The Remote State Solution:**
 
-With remote state, Terraform writes state data to a remote data store (such as Amazon S3, Azure Blob Storage, Google Cloud Storage, or Terraform Cloud) that can be shared between all team members. Remote state also enables **state locking**, preventing concurrent Terraform operations that could lead to conflicts or corruption. These capabilities transform Terraform from a single-user tool into a robust team collaboration platform.
+With remote state, Terraform writes state data to a remote data store (such as Amazon S3, Azure Blob Storage, Google Cloud Storage, or HCP Terraform) that can be shared between all team members. Remote state also enables **state locking**, preventing concurrent Terraform operations that could lead to conflicts or corruption. These capabilities transform Terraform from a single-user tool into a robust team collaboration platform.
 
 **📚 Official Documentation:**
 - [HashiCorp: Remote State](https://developer.hashicorp.com/terraform/language/state/remote)
@@ -217,7 +217,7 @@ flowchart TD
     
     GCP[🔴 GCP GCS<br/>✅ Object versioning<br/>✅ IAM controls<br/>✅ KMS encryption<br/>✅ ADC authentication]
     
-    TFCLOUD[☁️ Terraform Cloud<br/>✅ State history UI<br/>✅ Team governance<br/>✅ Policy as code<br/>✅ Multi-cloud]
+    TFCLOUD[☁️ HCP Terraform<br/>✅ State history UI<br/>✅ Team governance<br/>✅ Policy as code<br/>✅ Multi-cloud]
     
     START --> Q1
     
@@ -259,22 +259,23 @@ Use this table to help determine which backend to use:
 
 | Scenario | Team Size | Environment | Recommended Backend | Rationale |
 |----------|-----------|-------------|---------------------|-----------|
-| **Learning Terraform** | 1 person | Local laptop | 🏠 Local | Simple, fast, no setup needed |
+| **Learning Terraform** | 1 person | Local laptop | 🏠 Local or ☁️ TF Cloud Free | Local: simple, fast; TF Cloud Free: learn team workflows |
 | **Local lab experiments** | 1 person | Dev/test | 🏠 Local | Quick iterations, throwaway infrastructure |
-| **Team development** | 2-5 people | Dev/staging | ☁️ S3/Azure/GCS | Locking prevents conflicts, cost-effective |
+| **Small team projects** | 2-5 people | Dev/staging | ☁️ TF Cloud Free or S3/Azure/GCS | Free tier covers <500 resources; cloud backends for larger |
+| **Team development** | 5+ people | Dev/staging | ☁️ S3/Azure/GCS | Locking prevents conflicts, cost-effective |
 | **Production infrastructure** | Any size | Production | ☁️ S3/Azure/GCS + versioning | Durability, recovery, audit, cost-effective |
 | **CI/CD automation** | Any size | All environments | ☁️ S3/Azure/GCS + CI/CD platform | Use existing CI/CD (GitHub Actions, Azure Pipelines) with cloud backend |
 | **Multi-cloud (build your own)** | Any size | All environments | ☁️ S3/Azure/GCS + tooling | Cheaper, requires engineering CI/CD, policy, secrets |
-| **Multi-cloud (managed service)** | Any size | All environments | ☁️ Terraform Cloud | Higher cost, but managed runners, policy, UI, integrations |
-| **HashiCorp-centric stack** | Any size | All environments | ☁️ Terraform Cloud | Deep integration with Vault, Consul, Sentinel, Stacks |
-| **Need web UI for stakeholders** | Any size | All environments | ☁️ Terraform Cloud | Built-in UI for plan review, approvals, state history |
-| **Limited engineering capacity** | Any size | All environments | ☁️ Terraform Cloud | Managed service, less infrastructure to maintain |
+| **Multi-cloud (managed service)** | Any size | All environments | ☁️ HCP Terraform Paid | Paid tiers for >500 resources, managed runners, policy, UI |
+| **HashiCorp-centric stack** | Any size | All environments | ☁️ HCP Terraform | Deep integration with Vault, Consul, Sentinel, Stacks |
+| **Need web UI for stakeholders** | Any size | All environments | ☁️ HCP Terraform | Built-in UI for plan review, approvals, state history |
+| **Limited engineering capacity** | Any size | All environments | ☁️ HCP Terraform | Managed service, less infrastructure to maintain |
 
-### 🤔 Terraform Cloud vs. Cloud Provider Backends: The Build vs. Buy Decision
+### 🤔 HCP Terraform vs. Cloud Provider Backends: The Build vs. Buy Decision
 
-**The Core Question:** Terraform Cloud provides state management, managed runners, policy as code (Sentinel/OPA), HashiCorp Vault integration, team management UI, and HashiCorp Stacks. However, **all of these features can be built yourself** using cloud provider backends (S3/Azure/GCS) combined with your own tooling—and it will be **significantly cheaper**. So when should you actually use Terraform Cloud?
+**The Core Question:** HCP Terraform provides state management, managed runners, policy as code (Sentinel/OPA), HashiCorp Vault integration, team management UI, and HashiCorp Stacks. However, **all of these features can be built yourself** using cloud provider backends (S3/Azure/GCS) combined with your own tooling—and it will be **significantly cheaper**. So when should you actually use HCP Terraform?
 
-#### ☁️ What Terraform Cloud Provides (Managed Service)
+#### ☁️ What HCP Terraform Provides (Managed Service)
 
 **Out-of-the-box capabilities include:**
 
@@ -287,9 +288,25 @@ Use this table to help determine which backend to use:
 - **Team Management** - RBAC, permissions, audit logs
 - **VCS Integration** - Native GitHub, GitLab, Bitbucket connections
 
-**💰 Cost:** Pricing is based on the number of resources under management ($0.10-$0.99 per resource per month, depending on tier: Essentials, Standard, or Premium). This means costs scale with infrastructure size. However, you gain **less engineering time** required to build and maintain these capabilities yourself. [Terraform Cloud Pricing](https://www.hashicorp.com/en/pricing)
+#### 🆓 Enhanced Free Tier (2023+)
 
-💡 **Key Insight**: For most teams, especially those already on AWS, Azure, or GCP with existing CI/CD platforms, **cloud provider backends offer 90% of the capabilities at a fraction of the cost**—but you must engineer and maintain these capabilities yourself. Terraform Cloud makes sense when engineering time is more expensive than the per-resource subscription cost (which scales with your infrastructure size), or when you need enterprise features that are difficult to build (advanced RBAC, Sentinel policies, Stacks). When choosing your remote state strategy, engage with your cloud teams and understand what they have in place architecturally for your organization and adopt the same pattern.
+As of 2023, HCP Terraform offers an **enhanced Free tier** designed for teams getting started:
+- **500 managed resources** at no charge
+- **Unlimited users** (no user-count friction)
+- **Security features**: SSO, policy as code (Sentinel + OPA), run tasks
+- **Core workflows**: State management, remote runs, VCS integration, cost estimation
+
+**📅 Migration Note**: Organizations on legacy Free plans are being automatically migrated to the enhanced Free tier by March 31, 2026. The enhanced tier provides more features while maintaining the 500 resource limit, making it ideal for learning, small teams, and pilot projects.
+
+💡 **For Learning**: The enhanced free tier with 500 resources is more than sufficient for training and experimentation, making HCP Terraform a viable option alongside cloud provider backends.
+
+**📚 Learn More:** [Continuing HCP Terraform's Enhanced Free Tier Experience](https://www.hashicorp.com/en/blog/continuing-hcp-terraform-s-enhanced-free-tier-experience)
+
+#### 💰 Paid Tier Pricing
+
+**Cost:** Pricing is based on the number of resources under management ($0.10-$0.99 per resource per month, depending on tier: Essentials, Standard, or Premium). This means costs scale with infrastructure size. However, you gain **less engineering time** required to build and maintain these capabilities yourself. [HCP Terraform Pricing](https://www.hashicorp.com/en/pricing)
+
+💡 **Key Insight**: For most teams, especially those already on AWS, Azure, or GCP with existing CI/CD platforms, **cloud provider backends offer 90% of the capabilities at a fraction of the cost**—but you must engineer and maintain these capabilities yourself. HCP Terraform makes sense when engineering time is more expensive than the per-resource subscription cost (which scales with your infrastructure size), or when you need enterprise features that are difficult to build (advanced RBAC, Sentinel policies, Stacks). When choosing your remote state strategy, engage with your cloud teams and understand what they have in place architecturally for your organization and adopt the same pattern.
 
 ### 🏠 Local State: When to Use
 
@@ -475,7 +492,7 @@ Each backend provides different features and capabilities, and choosing the righ
 | **🟠 AWS S3** | AWS-centric teams | ✅ S3 native | ✅ S3 versioning | ✅ KMS/SSE | IAM-based access |
 | **🔷 Azure Storage** | Azure-centric teams | ✅ Native blob lock | ✅ Blob versions | ✅ Storage encryption | Entra ID/RBAC |
 | **🔴 GCP GCS** | GCP-centric teams | ✅ Native object lock | ✅ Object versioning | ✅ KMS encryption | IAM-based access |
-| **☁️ Terraform Cloud** | Multi-cloud, governance | ✅ Queue-based | ✅ State history UI | ✅ At-rest encryption | Full governance |
+| **☁️ HCP Terraform** | Multi-cloud, governance | ✅ Queue-based | ✅ State history UI | ✅ At-rest encryption | Full governance |
 | **🏠 Local** | Learning, solo dev | ❌ No locking | ❌ Manual only | ❌ Filesystem only | Not for teams |
 
 **📚 Official Backend Documentation:**
@@ -501,7 +518,7 @@ flowchart TB
         S3[🟠 AWS S3<br/>+ DynamoDB Lock]
         AZURE[🔷 Azure Storage<br/>+ Blob Lock]
         GCS[🔴 GCP GCS<br/>+ Object Lock]
-        TFCLOUD[☁️ Terraform Cloud<br/>+ Workspace]
+        TFCLOUD[☁️ HCP Terraform<br/>+ Workspace]
         
         BACKEND --> S3
         BACKEND --> AZURE
@@ -558,14 +575,16 @@ The S3 backend provides enterprise-grade durability (99.999999999% or "11 nines"
 **🎯 Key Features:**
 
 - **High Durability** - 99.999999999% (11 nines) object durability with automatic replication across availability zones
-- **S3 Native Locking** - Built-in state locking using S3 object locking (recommended approach as of Terraform v1.6+)
-- **DynamoDB Locking** - Legacy locking mechanism using a DynamoDB table (deprecated, but still supported for backward compatibility)
+- **S3 Native Locking** - Built-in state locking using S3 conditional writes (recommended approach as of Terraform v1.10+, experimental tag removed in v1.11)
+- **DynamoDB Locking** - Legacy locking mechanism using a DynamoDB table (deprecated as of Terraform v1.11, will be removed in future minor version)
 - **Bucket Versioning** - S3 versioning provides complete state history for rollback and recovery
 - **Encryption** - Server-side encryption with AWS KMS (customer-managed keys) or SSE-S3 (Amazon-managed keys)
 - **IAM Access Control** - Fine-grained permissions using IAM policies for secure team access
 
 **📚 Official Documentation:**
 - [HashiCorp: S3 Backend Configuration](https://developer.hashicorp.com/terraform/language/backend/s3)
+- [Goodbye DynamoDB — Terraform S3 Backend Now Supports Native Locking](https://rafaelmedeiros94.medium.com/goodbye-dynamodb-terraform-s3-backend-now-supports-native-locking-06f74037ad39)
+- [S3 Native State Locking](https://www.bschaatsbergen.com/s3-native-state-locking)
 
 ### 📋 Basic S3 Backend Configuration
 
@@ -637,10 +656,13 @@ terraform {
     bucket         = "my-terraform-state"
     key            = "jamfpro/terraform.tfstate"
     region         = "us-west-2"
-    use_lockfile   = true  # S3 native locking
+    use_lockfile   = true  # S3 native locking (Terraform 1.10+)
     encrypt        = true
   }
 }
+
+# Note: use_lockfile was introduced as experimental in Terraform 1.10
+# and marked as stable (experimental tag removed) in Terraform 1.11
 ```
 
 **Step 3: Initialize and Migrate**
@@ -676,15 +698,18 @@ The backend integrates seamlessly with Azure's security ecosystem, supporting Ro
 **🎯 Key Features:**
 
 - **Native Blob Locking** - Blob lease-based state locking built directly into Azure Storage (no additional services required)
-- **Entra ID Authentication** - Modern, secretless authentication using Azure Entra ID (recommended over access keys)
+- **Entra ID Authentication** - Modern, secretless authentication using Azure Entra ID (strongly recommended over access keys)
 - **OIDC Support** - OpenID Connect authentication for CI/CD workflows (GitHub Actions, Azure DevOps)
 - **Blob Versioning** - Complete state history with blob versioning for rollback and recovery
 - **Azure Storage Encryption** - Automatic server-side encryption (SSE) with Microsoft-managed or customer-managed keys
 - **RBAC Integration** - Fine-grained access control using Azure Role-Based Access Control
 
+**🔒 Security Best Practice:** It is strongly recommended to use `use_azuread_auth = true` instead of storage account access keys. Without Entra ID auth, Terraform must retrieve the storage account access keys (requiring `ListKeys` permission), which grants full access to the entire storage account. Entra ID authentication with `Storage Blob Data Owner` role provides granular, auditable access control.
+
 **📚 Official Documentation:**
 - [HashiCorp: Azure Backend Configuration](https://developer.hashicorp.com/terraform/language/backend/azurerm)
 - [Microsoft: Store Terraform State in Azure Storage](https://learn.microsoft.com/en-us/azure/developer/terraform/store-state-in-azure-storage?tabs=azure-cli)
+- [Using OIDC Authentication with the AzureRM Backend](https://nedinthecloud.com/2022/06/08/using-oidc-authentication-with-the-azurerm-backend/)
 
 ### 📋 Basic Azure Backend Configuration
 
@@ -888,21 +913,21 @@ terraform {
 
 ---
 
-## ☁️ Terraform Cloud Backend
+## ☁️ HCP Terraform Backend
 
-Terraform Cloud (formerly Terraform Enterprise for SaaS) provides a fully managed state backend with enterprise-grade features that extend far beyond simple state storage. Unlike cloud provider backends (S3, Azure Storage, GCS) that only handle state storage and locking, Terraform Cloud provides a complete **collaboration platform** with governance, policy enforcement, team management, and operational workflows.
+HCP Terraform (formerly Terraform Enterprise for SaaS) provides a fully managed state backend with enterprise-grade features that extend far beyond simple state storage. Unlike cloud provider backends (S3, Azure Storage, GCS) that only handle state storage and locking, HCP Terraform provides a complete **collaboration platform** with governance, policy enforcement, team management, and operational workflows.
 
 **Advanced Locking with Run Queuing:**
 
-Terraform Cloud implements a more sophisticated locking mechanism than traditional backends. Rather than simply preventing concurrent runs, it uses **run queuing** to detect when a new plan is requested while an existing plan awaits approval. Runs queue in a central location, providing better team coordination and preventing the common scenario where multiple team members create conflicting plans.
+HCP Terraform implements a more sophisticated locking mechanism than traditional backends. Rather than simply preventing concurrent runs, it uses **run queuing** to detect when a new plan is requested while an existing plan awaits approval. Runs queue in a central location, providing better team coordination and preventing the common scenario where multiple team members create conflicting plans.
 
 **State History and Versioning:**
 
-Every state change in Terraform Cloud is versioned and stored with complete audit trail information—who made the change, when, and through which run. The web UI provides visual diff tools to compare state versions, making it easy to understand what changed and rollback if necessary. Unlike S3 or Azure Storage where you must use CLI tools or cloud console to access versions, Terraform Cloud's UI makes state management accessible to all team members.
+Every state change in HCP Terraform is versioned and stored with complete audit trail information—who made the change, when, and through which run. The web UI provides visual diff tools to compare state versions, making it easy to understand what changed and rollback if necessary. Unlike S3 or Azure Storage where you must use CLI tools or cloud console to access versions, HCP Terraform's UI makes state management accessible to all team members.
 
 **Policy as Code:**
 
-Terraform Cloud supports **Sentinel policies**—a policy-as-code framework that can enforce compliance, security, and operational requirements automatically. For example, you can prevent creation of unencrypted databases, enforce resource tagging standards, or require approval for changes to production resources.
+HCP Terraform supports **Sentinel policies**—a policy-as-code framework that can enforce compliance, security, and operational requirements automatically. For example, you can prevent creation of unencrypted databases, enforce resource tagging standards, or require approval for changes to production resources.
 
 **🎯 Key Features:**
 
@@ -914,9 +939,9 @@ Terraform Cloud supports **Sentinel policies**—a policy-as-code framework that
 - **🔗 VCS Integration** - Native integrations with GitHub, GitLab, Bitbucket for GitOps workflows
 - **🌐 Multi-cloud** - Best choice for organizations managing infrastructure across multiple cloud providers
 
-**When to Choose Terraform Cloud:**
+**When to Choose HCP Terraform:**
 
-Terraform Cloud excels for organizations that need:
+HCP Terraform excels for organizations that need:
 - Governance and policy enforcement across teams
 - Multi-cloud infrastructure (not tied to a single cloud provider)
 - Visual UI for non-technical stakeholders
@@ -924,9 +949,9 @@ Terraform Cloud excels for organizations that need:
 - Advanced team collaboration beyond basic locking
 
 **📚 Official Documentation:**
-- [HashiCorp: HCP Terraform (Terraform Cloud)](https://developer.hashicorp.com/terraform/cloud-docs)
+- [HashiCorp: HCP Terraform (HCP Terraform)](https://developer.hashicorp.com/terraform/cloud-docs)
 
-### 📋 Terraform Cloud Backend Configuration
+### 📋 HCP Terraform Backend Configuration
 
 ```hcl
 terraform {
@@ -954,7 +979,7 @@ terraform {
 # }
 ```
 
-### 🏗️ Terraform Cloud Architecture
+### 🏗️ HCP Terraform Architecture
 
 ```mermaid
 flowchart TB
@@ -968,7 +993,7 @@ flowchart TB
         GIT[📦 Git Repository<br/>Terraform Configurations]
     end
     
-    subgraph "Terraform Cloud"
+    subgraph "HCP Terraform"
         ORG[🏢 Organization]
         
         subgraph "Workspaces"
@@ -1014,9 +1039,9 @@ flowchart TB
     style STATE fill:#e8f5e8
 ```
 
-### 🚀 Setting Up Terraform Cloud
+### 🚀 Setting Up HCP Terraform
 
-**Step 1: Create Terraform Cloud Account**
+**Step 1: Create HCP Terraform Account**
 
 1. Sign up at [https://app.terraform.io/signup](https://app.terraform.io/signup)
 2. Create an organization
@@ -1025,7 +1050,7 @@ flowchart TB
 **Step 2: Configure Local CLI**
 
 ```bash
-# Login to Terraform Cloud
+# Login to HCP Terraform
 terraform login
 
 # Or set token manually
@@ -1067,7 +1092,7 @@ provider "jamfpro" {
 **Step 4: Initialize and Migrate**
 
 ```bash
-# Initialize with Terraform Cloud
+# Initialize with HCP Terraform
 terraform init
 
 # Migrate local state to cloud
@@ -1075,7 +1100,7 @@ terraform init
 # Answer: yes
 ```
 
-💡 **Pro Tip**: Terraform Cloud's state history UI makes it easy to view and rollback state changes without CLI commands!
+💡 **Pro Tip**: HCP Terraform's state history UI makes it easy to view and rollback state changes without CLI commands!
 
 ---
 
@@ -1305,10 +1330,10 @@ resource "azurerm_network_interface" "app" {
 }
 ```
 
-### ☁️ Terraform Cloud Remote State Reference
+### ☁️ HCP Terraform Remote State Reference
 
 ```hcl
-# Reference Terraform Cloud workspace state
+# Reference HCP Terraform workspace state
 data "terraform_remote_state" "network" {
   backend = "remote"
   
@@ -1321,7 +1346,7 @@ data "terraform_remote_state" "network" {
   }
 }
 
-# Use outputs from Terraform Cloud workspace
+# Use outputs from HCP Terraform workspace
 resource "aws_instance" "app" {
   ami           = "ami-12345"
   instance_type = "t3.micro"
@@ -1331,7 +1356,7 @@ resource "aws_instance" "app" {
 
 **🔒 Security Alternative: tfe_outputs Data Source**
 
-For enhanced security with Terraform Cloud, use the `tfe_outputs` data source instead:
+For enhanced security with HCP Terraform, use the `tfe_outputs` data source instead:
 
 ```hcl
 # More secure alternative to terraform_remote_state
@@ -1525,18 +1550,25 @@ State refresh ensures Terraform detects **drift** - changes made to infrastructu
 
 | Resources | Typical Refresh Time | Notes |
 |-----------|---------------------|-------|
-| 10-50 | 30 seconds - 5 minutes | ✅ Manageable for most workflows |
-| 50-100 | 10-30 minutes | ⚠️ Noticeable slowdown |
-| 500+ | 1-4+ hours | 🚨 Significant bottleneck |
-| 2,000+ | Hours+ | 🚨 Requires optimization strategies |
+| 10-50 | 30 seconds - 2 minutes | ✅ Optimal for most workflows |
+| 50-200 | 2-10 minutes | ✅ Acceptable |
+| 200-500 | 10-30 minutes | ⚠️ Consider optimization |
+| 500-1000 | 30-60+ minutes | 🚨 Significant bottleneck, split recommended |
+| 2,000+ | Hours | 🚨 Requires immediate splitting |
 
 **Performance Challenges:**
 
 - ⚠️ **Linear scaling**: More resources = proportionally longer refresh times
 - ⚠️ **API throttling**: Cloud providers rate-limit API calls, causing delays
 - ⚠️ **Large state files**: State files >10MB cause download/upload slowdowns (remote backends)
-- ⚠️ **Network latency**: Each resource query incurs network round-trip time
+- ⚠️ **Network latency**: Each resource query incurs network round-trip time (hundreds of milliseconds per resource)
 - ⚠️ **Sequential dependencies**: Some resources must be queried in specific order
+- ⚠️ **Memory consumption**: Scales at approximately 512MB per 1,000 resources
+
+**📚 Research Sources:**
+- [State | Terraform | HashiCorp Developer](https://developer.hashicorp.com/terraform/language/state)
+- [Working with huge Terraform states | by Alex Ott | Medium](https://medium.com/@alexott_en/working-with-huge-terraform-states-2cb493db5352)
+- [Mastering Terraform at Scale: A Developer's Guide](https://scalr.com/blog/mastering-terraform-at-scale-a-developers-guide-to-robust-infrastructure)
 
 **Real-World Example:**
 
@@ -1648,14 +1680,17 @@ time terraform plan -refresh-only
 | | 1-10MB | ✅ Acceptable |
 | | 10-50MB | ⚠️ Consider splitting |
 | | >50MB | 🚨 Definitely split |
-| **Resource count** | <50 | ✅ Optimal |
+| **Resource count** | <50 | ✅ Optimal (aligns with Google Cloud best practices) |
 | | 50-200 | ✅ Acceptable |
-| | 200-1000 | ⚠️ Consider splitting |
+| | 200-500 | ⚠️ Consider splitting |
+| | 500-1000 | ⚠️ Strongly consider splitting |
 | | >1000 | 🚨 Definitely split |
 | **Refresh duration** | <2 min | ✅ Optimal |
 | | 2-10 min | ✅ Acceptable |
-| | >10 min | ⚠️ Start planning split |
+| | 10-30 min | ⚠️ Start planning split |
 | | >30 min | 🚨 Split immediately |
+
+💡 **Google Cloud Best Practice**: "Not to include more than 100 resources (and ideally only a few dozen) in a single state."
 
 ### 💡 Best Practices
 
@@ -1745,7 +1780,7 @@ terraform state push backup-20231201-143000.tfstate
 
 **Duration**: 25 minutes
 
-⚠️ **Important Note**: This exercise uses **local state** for simplicity. State operations (`list`, `show`, `mv`, `rm`) work with **all backends**, but `pull`/`push` operations have limitations with Terraform Cloud.
+⚠️ **Important Note**: This exercise uses **local state** for simplicity. State operations (`list`, `show`, `mv`, `rm`) work with **all backends**, but `pull`/`push` operations have limitations with HCP Terraform.
 
 Let's practice essential state management operations.
 
@@ -1814,24 +1849,29 @@ terraform destroy
 **Step 4: Remote State Considerations**
 
 ```bash
-# If using S3 backend, these operations work:
-terraform state list                    # ✅ Works
-terraform state show aws_instance.web[0] # ✅ Works
-terraform state mv aws_instance.web[0] aws_instance.primary # ✅ Works
-terraform state rm aws_instance.web[1]  # ✅ Works
-terraform import aws_instance.web i-123 # ✅ Works
+# State operations work with all backends:
+terraform state list                    # ✅ Works with all backends
+terraform state show aws_instance.web[0] # ✅ Works with all backends
+terraform state mv aws_instance.web[0] aws_instance.primary # ✅ Works with all backends
+terraform state rm aws_instance.web[1]  # ✅ Works with all backends
+terraform import aws_instance.web i-123 # ✅ Works with all backends (legacy approach)
 
-# These operations have limitations:
-terraform state pull > backup.tfstate   # ✅ S3/Azure, ❌ Terraform Cloud
-terraform state push backup.tfstate     # ✅ S3/Azure, ❌ Terraform Cloud
+# State pull/push operations (all backends):
+terraform state pull > backup.tfstate   # ✅ Works with all backends
+terraform state push backup.tfstate     # ✅ Works with all backends
 
-# For Terraform Cloud users:
-# - Use the web UI for state history and rollback
-# - Use API calls for advanced state operations
-# - State pull/push operations are restricted for security
+# Important HCP Terraform/HCP Terraform considerations:
+# - state push requires matching Terraform version (use -ignore-remote-version if needed)
+# - State push performs safety checks (lineage, serial number validation)
+# - Web UI provides easier rollback interface than CLI commands
+# - API available for advanced automation scenarios
 ```
 
-💡 **Pro Tip**: Always backup state before risky operations. For remote backends, use versioning (S3) or the platform's built-in state history (Terraform Cloud)!
+**📚 Learn More:**
+- [Migrating Terraform Workspace State Across Organizations](https://support.hashicorp.com/hc/en-us/articles/360001151948-Migrate-Workspace-State-Using-Terraform-State-Push-Pull)
+- [terraform state push command reference](https://developer.hashicorp.com/terraform/cli/commands/state/push)
+
+💡 **Pro Tip**: Always backup state before risky operations. For remote backends, use versioning (S3) or the platform's built-in state history (HCP Terraform)!
 
 ---
 
@@ -1957,15 +1997,15 @@ az storage blob list \
   --output table
 ```
 
-### Option C: Terraform Cloud Backend
+### Option C: HCP Terraform Backend
 
-**Step 1: Create Terraform Cloud Account**
+**Step 1: Create HCP Terraform Account**
 
 1. Sign up at [app.terraform.io](https://app.terraform.io/signup)
 2. Create organization: "learning-terraform" (or similar)
 3. Create workspace: "jamfpro-learning"
 
-**Step 2: Login to Terraform Cloud**
+**Step 2: Login to HCP Terraform**
 
 ```bash
 # Login via CLI
@@ -1993,10 +2033,10 @@ terraform {
 **Step 4: Test Migration**
 
 ```bash
-# Initialize and migrate to Terraform Cloud
+# Initialize and migrate to HCP Terraform
 terraform init
 
-# Run plan - notice it runs in Terraform Cloud!
+# Run plan - notice it runs in HCP Terraform!
 terraform plan
 
 # Check workspace in UI
@@ -2244,7 +2284,7 @@ az storage blob download \
   --account-name your-storage-account
 ```
 
-### For Terraform Cloud Users:
+### For HCP Terraform Users:
 
 ```bash
 # Use the Web UI for state management:
@@ -2267,112 +2307,6 @@ curl \
 ```
 
 💡 **Pro Tip**: Test your recovery procedures regularly - don't wait for an emergency to learn how to restore state!
-
----
-
-## 💻 **Exercise 8.4**: Backend Migration
-
-**Duration**: 20 minutes
-
-Practice migrating between different backend types to understand the migration process.
-
-**Step 1: Start with Local State**
-
-```bash
-mkdir terraform-backend-migration
-cd terraform-backend-migration
-
-cat > main.tf << 'EOF'
-resource "jamfpro_category" "migration_test" {
-  name     = "Backend Migration Test"
-  priority = 10
-}
-
-output "category_id" {
-  value = jamfpro_category.migration_test.id
-}
-EOF
-
-# Deploy with local state
-terraform init
-terraform apply
-# Creates: terraform.tfstate (local file)
-```
-
-**Step 2: Migrate to Remote Backend**
-
-Add backend configuration:
-
-```hcl
-terraform {
-  backend "s3" {  # Or azurerm, gcs, cloud - choose your backend
-    bucket       = "your-state-bucket"
-    key          = "migration-test/terraform.tfstate"
-    region       = "us-west-2"
-    use_lockfile = true
-    encrypt      = true
-  }
-}
-```
-
-```bash
-# Re-initialize to migrate state
-terraform init
-
-# Terraform detects backend change:
-# Backend configuration changed!
-# 
-# Terraform has detected that the configuration specified for the backend
-# has changed. Terraform will now check for existing state in the backends.
-#
-# Do you want to copy existing state to the new backend?
-#   Pre-existing state was found while migrating the previous "local" backend
-#   to the newly configured "s3" backend. No existing state was found in the
-#   newly configured "s3" backend. Do you want to copy this state to the new
-#   "s3" backend? Enter "yes" to copy and "no" to start with an empty state.
-
-# Answer: yes
-
-# Verify migration
-terraform state list
-terraform plan  # Should show no changes
-```
-
-**Step 3: Verify Remote State**
-
-```bash
-# For S3:
-aws s3 ls s3://your-state-bucket/migration-test/
-
-# For Azure:
-az storage blob list \
-  --container-name tfstate \
-  --account-name your-storage-account
-
-# For Terraform Cloud:
-# Check workspace in UI: app.terraform.io
-```
-
-**Step 4: Migrate Back (Optional)**
-
-```hcl
-# Remove backend block from main.tf or backend.tf
-# terraform { backend "s3" { ... } }  # <- Delete or comment out
-```
-
-```bash
-# Re-initialize
-terraform init
-
-# Terraform prompts to migrate back to local:
-# Do you want to copy existing state from the "s3" backend?
-# Answer: yes
-
-# State is now local again
-ls -la terraform.tfstate
-```
-
-💡 **Pro Tip**: Backend migrations are safe and reversible. Terraform always prompts before copying state!
 
 ---
 
@@ -2590,8 +2524,10 @@ terraform state pull | jq '.resources[].instances[0] | .attributes | length'
 |----------------|-----------|--------------|----------------|
 | <1MB | <50 | <2 min | ✅ Optimal |
 | 1-10MB | 50-200 | 2-10 min | ✅ Acceptable |
-| 10-50MB | 200-1000 | 10-30 min | ⚠️ Consider splitting |
+| 10-50MB | 200-500 | 10-30 min | ⚠️ Consider splitting |
 | >50MB | >1000 | >30 min | 🚨 Definitely split |
+
+**📚 Sources:** Based on real-world data from [Working with huge Terraform states](https://medium.com/@alexott_en/working-with-huge-terraform-states-2cb493db5352) and [Mastering Terraform at Scale](https://scalr.com/blog/mastering-terraform-at-scale-a-developers-guide-to-robust-infrastructure)
 
 💡 **Pro Tip**: Monitor your state refresh duration over time. If it exceeds 5-10 minutes, start planning to split your configuration into logical components.
 
@@ -2772,7 +2708,7 @@ Test your understanding of Terraform state management concepts:
 
 </details>
 
-**4. Which state operation does NOT work with Terraform Cloud?**
+**4. Which state operation does NOT work with HCP Terraform?**
 
 - A) `terraform state list`
 - B) `terraform state show`
@@ -2782,7 +2718,7 @@ Test your understanding of Terraform state management concepts:
 <details>
 <summary>🔍 Click for Answer</summary>
 
-**C** - `terraform state push` is not supported with Terraform Cloud for security reasons. Use the UI or API for state management.
+**C** - `terraform state push` is not supported with HCP Terraform for security reasons. Use the UI or API for state management.
 
 </details>
 
@@ -2805,12 +2741,12 @@ Test your understanding of Terraform state management concepts:
 - A) AWS S3
 - B) Azure Storage
 - C) GCP GCS
-- D) Terraform Cloud
+- D) HCP Terraform
 
 <details>
 <summary>🔍 Click for Answer</summary>
 
-**D** - Terraform Cloud provides a comprehensive web UI for viewing state history, comparing versions, and performing rollbacks.
+**D** - HCP Terraform provides a comprehensive web UI for viewing state history, comparing versions, and performing rollbacks.
 
 </details>
 
@@ -2906,7 +2842,7 @@ Test your understanding of Terraform state management concepts:
 
 - ✅ Understood **Terraform state** and its critical role in infrastructure tracking
 - ✅ Chose between **local and remote state** based on use case, team size, and security needs
-- ✅ Configured **remote backends** for AWS S3, Azure Storage, GCP GCS, and Terraform Cloud
+- ✅ Configured **remote backends** for AWS S3, Azure Storage, GCP GCS, and HCP Terraform
 - ✅ Referenced **remote state across configurations** using `terraform_remote_state` data source
 - ✅ Mastered **state commands** including `list`, `show`, `mv`, `rm`, and `pull/push`
 - ✅ Implemented **state backup** strategies and versioning-based recovery procedures
@@ -2917,7 +2853,7 @@ Test your understanding of Terraform state management concepts:
 
 - **State File Structure**: JSON format, resources, metadata, dependencies
 - **Local vs Remote State**: When to use each approach and trade-offs
-- **Backend Types**: S3, Azure Storage, GCP GCS, Terraform Cloud comparison and configuration
+- **Backend Types**: S3, Azure Storage, GCP GCS, HCP Terraform comparison and configuration
 - **State Locking**: Preventing concurrent modifications across teams with native backend locking
 - **State Versioning**: History, recovery, and rollback capabilities across all backends
 - **Remote State References**: Cross-configuration resource sharing with `terraform_remote_state`
@@ -2941,7 +2877,7 @@ Test your understanding of Terraform state management concepts:
 - Configured AWS S3 backend with S3 native locking and KMS encryption
 - Set up Azure Storage backend with Entra ID authentication (no secrets!)
 - Implemented GCP GCS backend with Cloud KMS customer-managed encryption keys
-- Deployed Terraform Cloud workspaces for enterprise governance and policy as code
+- Deployed HCP Terraform workspaces for enterprise governance and policy as code
 - Created cross-configuration remote state references for team delegation
 - Executed safe backend migrations from local to remote state
 - Recovered state from versioned backups across multiple backend types
@@ -2956,7 +2892,7 @@ Test your understanding of Terraform state management concepts:
 - **Authentication**: Use Entra ID, OIDC, or IAM roles instead of static credentials
 - **Access Control**: Implement least-privilege IAM/RBAC policies per environment
 - **Organization**: Logical state key structure by team, component, or environment
-- **Locking**: Always enable state locking for team collaboration (S3, Azure, GCS, Terraform Cloud)
+- **Locking**: Always enable state locking for team collaboration (S3, Azure, GCS, HCP Terraform)
 - **Monitoring**: Active monitoring of state operations, lock timeouts, and access patterns
 - **Documentation**: Clear team guidelines for state management and recovery workflows
 
