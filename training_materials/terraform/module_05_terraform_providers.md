@@ -1,4 +1,4 @@
-# Module 07: Terraform Providers
+# Module 05: Terraform Providers
 
 ## _Duration: 2 hours | Labs: 2_ | Difficulty: 🟢 Beginner\*
 

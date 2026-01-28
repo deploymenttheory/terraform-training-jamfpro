@@ -39,6 +39,28 @@ By the end of this module, you will be able to:
 
 ---
 
+## 📌 Terraform Version Guidance
+
+This module references various Terraform versions throughout to provide historical context for feature releases. Key version milestones include:
+
+- **Terraform 1.10** - Introduced experimental S3 native locking with `use_lockfile`
+- **Terraform 1.11** - Stabilized S3 native locking, deprecated DynamoDB locking
+- **Terraform 1.14.4** (December 2025) - Latest stable version at time of writing
+
+**Version Selection Recommendations:**
+
+For **learning and new projects**, use the latest stable version to benefit from recent features, bug fixes, and security updates. The code examples in this module use `required_version = ">= 1.0"` to remain compatible across versions, but in practice:
+
+- **Development/Learning:** Use `latest` or pin to current stable (e.g., `~> 1.14.0`)
+- **Production:** Pin to a specific minor version for stability (e.g., `~> 1.14.0`)
+- **Team Environments:** Coordinate version upgrades across the team
+
+All examples in this module work with Terraform 1.11+ for S3 native locking features. Earlier versions (1.0-1.10) remain compatible but require DynamoDB for S3 state locking.
+
+**📚 Learn More:** [Terraform Version Constraints](https://developer.hashicorp.com/terraform/language/expressions/version-constraints)
+
+---
+
 ## 📚 What is Terraform State?
 
 **Terraform state** is a necessary requirement for Terraform to function. It is stored by default in a local JSON file named `terraform.tfstate`, but in team environments, it should be stored in a remote backend to enable collaboration, versioning, and security.
@@ -605,8 +627,8 @@ The S3 backend provides enterprise-grade durability (99.999999999% or "11 nines"
 **🎯 Key Features:**
 
 - **High Durability** - 99.999999999% (11 nines) object durability with automatic replication across availability zones
-- **S3 Native Locking** - Built-in state locking using S3 conditional writes (recommended approach as of Terraform v1.10+, experimental tag removed in v1.11)
-- **DynamoDB Locking** - Legacy locking mechanism using a DynamoDB table (deprecated as of Terraform v1.11, will be removed in future minor version)
+- **S3 Native Locking** - Built-in state locking using S3 conditional writes (introduced in Terraform v1.10, stable since v1.11, now the recommended standard)
+- **DynamoDB Locking** - ⚠️ Legacy locking mechanism using a DynamoDB table (deprecated as of Terraform v1.11, will be removed in a future version)
 - **Bucket Versioning** - S3 versioning provides complete state history for rollback and recovery
 - **Encryption** - Server-side encryption with AWS KMS (customer-managed keys) or SSE-S3 (Amazon-managed keys)
 - **IAM Access Control** - Fine-grained permissions using IAM policies for secure team access
@@ -686,13 +708,14 @@ terraform {
     bucket         = "my-terraform-state"
     key            = "jamfpro/terraform.tfstate"
     region         = "us-west-2"
-    use_lockfile   = true  # S3 native locking (Terraform 1.10+)
+    use_lockfile   = true  # S3 native locking (standard since Terraform 1.11)
     encrypt        = true
   }
 }
 
-# Note: use_lockfile was introduced as experimental in Terraform 1.10
-# and marked as stable (experimental tag removed) in Terraform 1.11
+# Note: use_lockfile was introduced as experimental in Terraform 1.10,
+# became stable in v1.11, and is now the recommended approach.
+# DynamoDB-based locking is deprecated and will be removed in a future version.
 ```
 
 **Step 3: Initialize and Migrate**
@@ -958,7 +981,7 @@ terraform {
 
 **HCP Terraform** (HashiCorp Cloud Platform Terraform, formerly known as "Terraform Cloud") provides a fully managed state backend with enterprise-grade features that extend far beyond simple state storage. Unlike cloud provider backends (S3, Azure Storage, GCS) that only handle state storage and locking, HCP Terraform provides a complete **collaboration platform** with governance, policy enforcement, team management, and operational workflows.
 
-**📝 Naming Note:** This product was rebranded from "Terraform Cloud" to "HCP Terraform" in 2023. You may see both names used interchangeably in documentation and community resources.
+**📝 Naming Note:** This product was rebranded from "Terraform Cloud" to "HCP Terraform" on April 22, 2024. You may see both names used interchangeably in documentation and community resources. The enhanced Free tier was introduced in May 2023, prior to the rebrand.
 
 **Advanced Locking with Run Queuing:**
 
@@ -2613,6 +2636,14 @@ curl \
 
 **Time**: 45 minutes
 
+**📌 Terraform Version Note:**
+
+This exercise uses the latest stable Terraform version available at the time of writing (December 2025: v1.14.4). The workflows are configured to use `terraform_version: latest`, which automatically pulls the most recent stable release. This is recommended for new projects to benefit from the latest features, bug fixes, and security updates.
+
+If you need version stability for production environments, pin to a specific version (e.g., `terraform_version: "1.14.4"`).
+
+**Historical Context:** Terraform 1.11.0 had a [known bug with Azure backend OIDC authentication](https://github.com/hashicorp/terraform/issues/36595) that was fixed in 1.11.2. If using versions prior to 1.11.2, be aware of this issue.
+
 ### Step 1: Set Up Azure Infrastructure
 
 Create the Azure resources needed for remote state and OIDC authentication:
@@ -2787,7 +2818,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.11.0
+          terraform_version: latest  # Or pin to specific version like "1.14.4"
 
       - name: Terraform Init
         run: terraform init
@@ -2841,7 +2872,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.11.0
+          terraform_version: latest  # Or pin to specific version like "1.14.4"
 
       - name: Terraform Init
         run: terraform init

@@ -8,6 +8,7 @@
 4.  [HashiCorp Introduction](./module_04_hashicorp_introduction.md)
 5.  [Terraform Providers](./module_05_terraform_providers.md)
 6.  [Terraform State](./module_06_terraform_state.md)
+7.  [Terraform Language](./module_07_terraform_language_and_hashicorp_language.md)
 10. [Terraform Basics](./module_10-00_terraform_basics.md)
 
 ## 📋 Course Prerequisites

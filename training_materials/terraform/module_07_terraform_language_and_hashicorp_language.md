@@ -1,6 +1,6 @@
-# 📝 Module 08: Terraform Language
+# 📝 Module 07: Terraform Language and HashiCorp Language
 
-## _Duration: 1.5 hours | Labs: 2_ | Difficulty: 🟢 Beginner\*
+## _Duration: 1.5 hours | Labs: 9 unit exercises_ | Difficulty: 🟢 Beginner\*
 
 ### 🎯 Learning Objectives
 
@@ -169,7 +169,7 @@ terraform {
 }
 ```
 
-The `terraform` block configures Terraform's behavior and defines the provider requirements for the configuration. It specifies the Terraform version needed and declares which providers versions are required too. LAter we shall look at how to define these using version constraints.
+The `terraform` block configures Terraform's behavior and defines the provider requirements for the configuration. It specifies the Terraform version needed and declares which providers versions are required too. Later we shall look at how to define these using version constraints.
 
 This block must be present in every Terraform configuration created, it won't work without it. This is also known as the root module.
 
@@ -445,7 +445,7 @@ graph TB
     style PR fill:#1ABC9C,color:#fff
 ```
 
-Understanding version constraints is crucial for managing Terraform provider and terraform moduleversions effectively. These operators control which versions are acceptable.
+Understanding version constraints is crucial for managing Terraform provider and terraform module versions effectively. These operators control which versions are acceptable.
 
 **🔧 Version Constraint Operators:**
 
@@ -2509,7 +2509,7 @@ output "building_id" {
 
 ---
 
-## ✅ Module 6 Summary
+## ✅ Module 7 Summary
 
 ### 🎯 Key Takeaways
 
@@ -2805,9 +2805,9 @@ It supports complex data types and nested structures, making it more powerful th
 - ✅ Applied **best practices** for syntax and formatting
 - ✅ Practiced with **comprehensive examples** and hands-on exercises
 
-**🎉 Congratulations!** You've completed Module 6 and now understand HCL syntax, Terraform language features, and best practices for writing clean, maintainable configurations!
+**🎉 Congratulations!** You've completed Module 7 and now understand HCL syntax, Terraform language features, and best practices for writing clean, maintainable configurations!
 
-**➡️ Ready for Module 7?** Let me know when you'd like to continue with Variables and Data - where we'll explore advanced variable types, validation, and data sources!
+**➡️ Ready for Module 8?** Let me know when you'd like to continue with Variables and Data - where we'll explore advanced variable types, validation, and data sources!
 
 ---
 
