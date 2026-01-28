@@ -1,6 +1,6 @@
 # 📁 Module 06: Terraform State Management
 
-## _Duration: 3 hours | Labs: 4_ | Difficulty: 🟡 Intermediate\*
+## _Duration: 3-4 hours | Labs: 4 (+ 1 optional advanced)_ | Difficulty: 🟡 Intermediate\*
 
 ---
 
@@ -264,7 +264,7 @@ Use this table to help determine which backend to use:
 | **Small team projects** | 2-5 people | Dev/staging | ☁️ TF Cloud Free or S3/Azure/GCS | Free tier covers <500 resources; cloud backends for larger |
 | **Team development** | 5+ people | Dev/staging | ☁️ S3/Azure/GCS | Locking prevents conflicts, cost-effective |
 | **Production infrastructure** | Any size | Production | ☁️ S3/Azure/GCS + versioning | Durability, recovery, audit, cost-effective |
-| **CI/CD automation** | Any size | All environments | ☁️ S3/Azure/GCS + CI/CD platform | Use existing CI/CD (GitHub Actions, Azure Pipelines) with cloud backend |
+| **CI/CD automation** | Any size | All environments | ☁️ S3/Azure/GCS + CI/CD platform | GitHub Actions with OIDC ([example](https://mattias.engineer/blog/2026/terraform-github-1/)), Azure Pipelines, or similar |
 | **Multi-cloud (build your own)** | Any size | All environments | ☁️ S3/Azure/GCS + tooling | Cheaper, requires engineering CI/CD, policy, secrets |
 | **Multi-cloud (managed service)** | Any size | All environments | ☁️ HCP Terraform Paid | Paid tiers for >500 resources, managed runners, policy, UI |
 | **HashiCorp-centric stack** | Any size | All environments | ☁️ HCP Terraform | Deep integration with Vault, Consul, Sentinel, Stacks |
@@ -307,6 +307,36 @@ As of 2023, HCP Terraform offers an **enhanced Free tier** designed for teams ge
 **Cost:** Pricing is based on the number of resources under management ($0.10-$0.99 per resource per month, depending on tier: Essentials, Standard, or Premium). This means costs scale with infrastructure size. However, you gain **less engineering time** required to build and maintain these capabilities yourself. [HCP Terraform Pricing](https://www.hashicorp.com/en/pricing)
 
 💡 **Key Insight**: For most teams, especially those already on AWS, Azure, or GCP with existing CI/CD platforms, **cloud provider backends offer 90% of the capabilities at a fraction of the cost**—but you must engineer and maintain these capabilities yourself. HCP Terraform makes sense when engineering time is more expensive than the per-resource subscription cost (which scales with your infrastructure size), or when you need enterprise features that are difficult to build (advanced RBAC, Sentinel policies, Stacks). When choosing your remote state strategy, engage with your cloud teams and understand what they have in place architecturally for your organization and adopt the same pattern.
+
+#### 🔧 Real-World Example: GitHub Actions as Your Terraform Engine
+
+A practical demonstration of the "build your own" approach comes from Mattias Fjellström's blog series, which implements a complete Terraform automation platform using GitHub Actions and Azure Storage at "close to zero" additional cost:
+
+**Architecture Components:**
+- **State Backend**: Azure Storage with blob locking
+- **CI/CD Platform**: GitHub Actions (included with GitHub subscription)
+- **Authentication**: OIDC with workload identities (no secrets!)
+- **Governance**: GitHub rulesets + Sentinel policies
+- **Separation of Concerns**: Read-only identity for `terraform plan`, write identity for `terraform apply`
+
+**Key Advantages:**
+- ✅ Minimal additional costs (leverages existing GitHub + Azure subscriptions)
+- ✅ Native OIDC authentication (no credential rotation)
+- ✅ Automated governance through branch protection
+- ✅ Scales across multiple landing zones/repositories
+
+**When This Approach Works:**
+- Teams with GitHub Enterprise or existing GitHub investment
+- Engineering capacity to build and maintain workflows
+- Azure-centric infrastructure
+- Need for cost optimization over managed services
+
+**📚 Learn More:**
+- [Part 1: Key Concepts](https://mattias.engineer/blog/2026/terraform-github-1/)
+- [Part 2: Governance & Scaling](https://mattias.engineer/blog/2026/terraform-github-2/)
+- [Part 3: Private Module Registry](https://mattias.engineer/blog/2026/terraform-github-3/)
+
+💡 **Comparison to HCP Terraform**: This approach trades managed convenience for cost savings. You get state management, CI/CD, and basic governance, but must engineer policy enforcement, UI access, and operational workflows yourself.
 
 ### 🏠 Local State: When to Use
 
@@ -805,6 +835,17 @@ terraform {
 }
 ```
 
+**📖 Real-World Implementation Guide:**
+
+For a complete guide to implementing Azure Storage backend with GitHub Actions and OIDC authentication, see Mattias Fjellström's practical walkthrough: [GitHub As Your Terraform Engine](https://mattias.engineer/blog/2026/terraform-github-1/). This demonstrates:
+
+- Setting up trust relationships between GitHub and Azure
+- Configuring separate identities for plan (read-only) and apply (write) operations
+- Automating workflows with GitHub Actions
+- Implementing governance through rulesets and policies
+
+This pattern eliminates secrets management entirely—GitHub Actions authenticates directly to Azure using OIDC, and Terraform accesses state using the same workload identity.
+
 💡 **Pro Tip**: Use Entra ID authentication (`use_azuread_auth = true`) instead of access keys for better security and no secret rotation!
 
 **📚 Learn More:** [HashiCorp: Azure Backend Documentation](https://developer.hashicorp.com/terraform/language/backend/azurerm)
@@ -1103,6 +1144,9 @@ terraform init
 ```
 
 💡 **Pro Tip**: HCP Terraform's state history UI makes it easy to view and rollback state changes without CLI commands!
+
+**📚 Official Getting Started Documentation:**
+- [HashiCorp: HCP Terraform Getting Started](https://developer.hashicorp.com/terraform/tutorials/cloud-get-started)
 
 ---
 
@@ -2557,6 +2601,284 @@ curl \
 
 ---
 
+## 💻 **Exercise 6.4**: GitHub Actions with Azure Remote State (Optional Advanced)
+
+**Goal**: Implement a complete GitHub Actions workflow with Azure Storage backend using OIDC authentication, demonstrating the "build your own" automation platform approach.
+
+**Prerequisites:**
+- GitHub repository (personal or organization)
+- Azure subscription
+- Azure CLI installed
+- GitHub CLI installed (optional)
+
+**Time**: 45 minutes
+
+### Step 1: Set Up Azure Infrastructure
+
+Create the Azure resources needed for remote state and OIDC authentication:
+
+```bash
+# Variables
+RESOURCE_GROUP="terraform-github-state"
+STORAGE_ACCOUNT="tfstate$(openssl rand -hex 4)"
+CONTAINER_NAME="tfstate"
+LOCATION="eastus"
+GITHUB_ORG="your-org"
+GITHUB_REPO="your-repo"
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create storage account with versioning
+az storage account create \
+  --resource-group $RESOURCE_GROUP \
+  --name $STORAGE_ACCOUNT \
+  --sku Standard_LRS \
+  --location $LOCATION
+
+az storage container create \
+  --name $CONTAINER_NAME \
+  --account-name $STORAGE_ACCOUNT
+
+az storage account blob-service-properties update \
+  --account-name $STORAGE_ACCOUNT \
+  --resource-group $RESOURCE_GROUP \
+  --enable-versioning true
+
+# Get subscription and tenant IDs
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+TENANT_ID=$(az account show --query tenantId -o tsv)
+```
+
+### Step 2: Create OIDC App Registrations
+
+Create two separate app registrations following the principle of least privilege:
+
+**App 1: Terraform Plan (Read-Only)**
+
+```bash
+# Create app registration for planning
+az ad app create \
+  --display-name "terraform-plan-${GITHUB_REPO}" \
+  --sign-in-audience AzureADMyOrg
+
+PLAN_APP_ID=$(az ad app list --display-name "terraform-plan-${GITHUB_REPO}" --query [0].appId -o tsv)
+
+# Create service principal
+az ad sp create --id $PLAN_APP_ID
+
+# Configure federated credentials for pull requests
+az ad app federated-credential create \
+  --id $PLAN_APP_ID \
+  --parameters '{
+    "name": "github-pr",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:'"${GITHUB_ORG}"'/'"${GITHUB_REPO}"':pull_request",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# Grant read permissions on resource group
+az role assignment create \
+  --assignee $PLAN_APP_ID \
+  --role "Reader" \
+  --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}"
+
+# Grant read access to state storage
+az role assignment create \
+  --assignee $PLAN_APP_ID \
+  --role "Storage Blob Data Reader" \
+  --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Storage/storageAccounts/${STORAGE_ACCOUNT}"
+```
+
+**App 2: Terraform Apply (Write Permissions)**
+
+```bash
+# Create app registration for applying
+az ad app create \
+  --display-name "terraform-apply-${GITHUB_REPO}" \
+  --sign-in-audience AzureADMyOrg
+
+APPLY_APP_ID=$(az ad app list --display-name "terraform-apply-${GITHUB_REPO}" --query [0].appId -o tsv)
+
+# Create service principal
+az ad sp create --id $APPLY_APP_ID
+
+# Configure federated credentials for main branch
+az ad app federated-credential create \
+  --id $APPLY_APP_ID \
+  --parameters '{
+    "name": "github-main",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:'"${GITHUB_ORG}"'/'"${GITHUB_REPO}"':ref:refs/heads/main",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# Grant contributor permissions on resource group
+az role assignment create \
+  --assignee $APPLY_APP_ID \
+  --role "Contributor" \
+  --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}"
+
+# Grant read/write access to state storage
+az role assignment create \
+  --assignee $APPLY_APP_ID \
+  --role "Storage Blob Data Owner" \
+  --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Storage/storageAccounts/${STORAGE_ACCOUNT}"
+```
+
+### Step 3: Configure GitHub Secrets
+
+Add these as GitHub repository secrets (Settings → Secrets and variables → Actions):
+
+- `AZURE_SUBSCRIPTION_ID`: Your subscription ID
+- `AZURE_TENANT_ID`: Your tenant ID
+- `AZURE_PLAN_CLIENT_ID`: The plan app registration ID
+- `AZURE_APPLY_CLIENT_ID`: The apply app registration ID
+- `AZURE_STORAGE_ACCOUNT`: Your storage account name
+
+### Step 4: Create Terraform Backend Configuration
+
+**backend.tf**:
+
+```hcl
+terraform {
+  backend "azurerm" {
+    use_azuread_auth     = true
+    use_oidc             = true
+    subscription_id      = "00000000-0000-0000-0000-000000000000"  # Replace
+    tenant_id            = "00000000-0000-0000-0000-000000000000"  # Replace
+    resource_group_name  = "terraform-github-state"
+    storage_account_name = "tfstateXXXXXXXX"  # Replace
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+  }
+}
+```
+
+### Step 5: Create GitHub Actions Workflows
+
+**.github/workflows/terraform-plan.yml**:
+
+```yaml
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_PLAN_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_PLAN_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -no-color
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_PLAN_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+```
+
+**.github/workflows/terraform-apply.yml**:
+
+```yaml
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_APPLY_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_APPLY_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_APPLY_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+```
+
+### Step 6: Test the Workflow
+
+1. Create a simple Terraform configuration (e.g., resource group)
+2. Create a pull request
+3. Observe the `terraform plan` workflow execute with read-only permissions
+4. Merge to main
+5. Observe the `terraform apply` workflow execute with write permissions
+
+### 🎯 Key Takeaways
+
+- **Zero Secrets**: OIDC authentication eliminates credential management
+- **Least Privilege**: Separate identities for plan and apply operations
+- **Cost Effective**: Uses existing GitHub and Azure subscriptions
+- **Scalable Pattern**: Can be replicated across multiple repositories
+
+**📚 Based On:** [GitHub As Your Terraform Engine](https://mattias.engineer/blog/2026/terraform-github-1/) by Mattias Fjellström
+
+---
+
 ## 📝 Exercise Summary
 
 Congratulations! You've completed the hands-on state management exercises. Here's what you've accomplished:
@@ -2581,11 +2903,19 @@ Congratulations! You've completed the hands-on state management exercises. Here'
 - ✅ Listed and downloaded previous state versions
 - ✅ Successfully restored working state
 
+**Exercise 6.4** (Optional Advanced): Implemented GitHub Actions with Azure Remote State
+- ✅ Configured OIDC authentication with separate plan/apply identities
+- ✅ Created automated workflows for infrastructure changes
+- ✅ Implemented secretless authentication pattern
+- ✅ Demonstrated cost-effective "build your own" approach
+
 **🎯 Key Skills Developed:**
 - State inspection and debugging
 - Backend configuration and migration
 - Cross-team collaboration patterns
 - Disaster recovery procedures
+- CI/CD automation with OIDC authentication
+- Principle of least privilege implementation
 
 **➡️ Next Steps:** Apply these state management practices to your real Jamf Pro infrastructure!
 
@@ -2937,7 +3267,11 @@ terraform {
 }
 ```
 
-**📚 Learn More:** [Scalr: Terraform State Files Best Practices](https://scalr.com/learning-center/terraform-state-files-best-practices/)
+**📚 Learn More:**
+- [Scalr: Terraform State Files Best Practices](https://scalr.com/learning-center/terraform-state-files-best-practices/)
+
+**📚 Real-World Implementations:**
+- [GitHub As Your Terraform Engine (3-part series)](https://mattias.engineer/blog/2026/terraform-github-1/) - Complete guide to building cost-effective Terraform automation on GitHub with Azure Storage backend, OIDC authentication, governance, and private module registry
 
 ---
 
