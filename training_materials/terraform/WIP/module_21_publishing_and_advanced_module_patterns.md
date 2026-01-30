@@ -809,7 +809,7 @@ func TestTerraformWebServerModule(t *testing.T) {
 
     terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
         TerraformDir: "../examples/basic",
-        Vars: map[string]interface{}{
+        Vars: map[string]any{
             "aws_region": awsRegion,
             "name":      "terratest-webserver",
         },
@@ -841,7 +841,7 @@ func TestTerraformWebServerModuleWithLoadBalancer(t *testing.T) {
 
     terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
         TerraformDir: "../examples/advanced",
-        Vars: map[string]interface{}{
+        Vars: map[string]any{
             "aws_region":            awsRegion,
             "name":                 "terratest-advanced-webserver",
             "enable_load_balancer": true,
@@ -2275,7 +2275,7 @@ func TestTerraformBasicExample(t *testing.T) {
 
     terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
         TerraformDir: "../examples/basic",
-        Vars: map[string]interface{}{
+        Vars: map[string]any{
             "name":               testName,
             "environment":        "dev",
             "cost_center":        "CC-1234",
@@ -2322,7 +2322,7 @@ func TestTerraformAdvancedExample(t *testing.T) {
 
     terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
         TerraformDir: "../examples/advanced",
-        Vars: map[string]interface{}{
+        Vars: map[string]any{
             "name":                   testName,
             "environment":           "production",
             "cost_center":           "CC-5678",
@@ -2376,7 +2376,7 @@ func TestTerraformComplianceValidation(t *testing.T) {
         t.Run(fmt.Sprintf("Compliance-%s", test.framework), func(t *testing.T) {
             terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
                 TerraformDir: "../examples/basic",
-                Vars: map[string]interface{}{
+                Vars: map[string]any{
                     "name":                  fmt.Sprintf("%s-%s", testName, test.framework),
                     "environment":          "production",
                     "cost_center":          "CC-9999",
