@@ -43,6 +43,9 @@ You will install Terraform in the [Lab Setup](./module_03_lab_setup.md) module.
 
 #### Code Editor (VS Code Required)
 
+> [!Tip]
+> New to VS Code? Complete the [VS Code for Infrastructure Engineers course](../vscode/module_00_course_overview.md) first - it covers the editor, extensions, Git integration, terminal, and Terraform-focused tasks and debugging.
+
 ```bash
 # Visual Studio Code - Download from https://code.visualstudio.com/
 # Required Extensions:
